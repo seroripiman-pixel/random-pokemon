@@ -1,134 +1,88 @@
-class Stopwatch {
-    constructor() {
-        this.time = 0;
-        this.running = false;
-        this.laps = [];
-        this.animationFrameId = null;
-        this.lastUpdateTime = 0;
-        this.init();
-    }
+const TOTAL_POKEMON = 1010;
 
-    init() {
-        this.loadState();
-        this.setupEventListeners();
-        this.render();
-    }
+const STAT_COLORS = {
+    hp:      '#ff5959',
+    attack:  '#f5a623',
+    defense: '#4a90e2',
+    speed:   '#5cb85c',
+};
 
-    setupEventListeners() {
-        document.getElementById('startBtn').addEventListener('click', () => this.start());
-        document.getElementById('stopBtn').addEventListener('click', () => this.stop());
-        document.getElementById('resetBtn').addEventListener('click', () => this.reset());
-        document.getElementById('lapBtn').addEventListener('click', () => this.lap());
-    }
+const STAT_LABELS = {
+    hp:      'HP',
+    attack:  'こうげき',
+    defense: 'ぼうぎょ',
+    speed:   'すばやさ',
+};
 
-    start() {
-        if (this.running) return;
-        this.running = true;
-        this.lastUpdateTime = performance.now();
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('stopBtn').disabled = false;
-        document.getElementById('lapBtn').disabled = false;
-        this.animate();
-    }
+async function fetchRandomPokemon() {
+    const id = Math.floor(Math.random() * TOTAL_POKEMON) + 1;
+    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    if (!res.ok) throw new Error('fetch failed');
+    return res.json();
+}
 
-    stop() {
-        this.running = false;
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('stopBtn').disabled = true;
-        this.saveState();
-    }
+function showLoading() {
+    document.getElementById('initial-message').classList.add('hidden');
+    document.getElementById('pokemon-info').classList.add('hidden');
+    document.getElementById('loading').classList.remove('hidden');
+}
 
-    reset() {
-        this.running = false;
-        this.time = 0;
-        this.laps = [];
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('stopBtn').disabled = true;
-        document.getElementById('lapBtn').disabled = true;
-        this.render();
-        this.saveState();
-    }
+function showPokemon(data) {
+    document.getElementById('loading').classList.add('hidden');
 
-    lap() {
-        if (!this.running) return;
-        this.laps.push(this.time);
-        this.render();
-        this.saveState();
-    }
+    const number = String(data.id).padStart(3, '0');
+    document.getElementById('pokemon-number').textContent = `#${number}`;
 
-    animate() {
-        if (!this.running) return;
-        const now = performance.now();
-        const deltaTime = now - this.lastUpdateTime;
-        this.time += deltaTime;
-        this.lastUpdateTime = now;
-        this.render();
-        this.animationFrameId = requestAnimationFrame(() => this.animate());
-    }
+    const img = document.getElementById('pokemon-image');
+    img.src = data.sprites.other['official-artwork'].front_default
+        || data.sprites.front_default;
+    img.alt = data.name;
 
-    render() {
-        this.updateDisplay();
-        this.renderLaps();
-    }
+    document.getElementById('pokemon-name').textContent = data.name;
 
-    updateDisplay() {
-        const totalMs = Math.floor(this.time);
-        const ms = totalMs % 1000;
-        const seconds = Math.floor(totalMs / 1000) % 60;
-        const minutes = Math.floor(totalMs / 60000) % 60;
-        const hours = Math.floor(totalMs / 3600000);
+    const typesEl = document.getElementById('pokemon-types');
+    typesEl.innerHTML = data.types
+        .map(t => `<span class="type-badge type-${t.type.name}">${t.type.name}</span>`)
+        .join('');
 
-        const display = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(Math.floor(ms / 10)).padStart(2, '0')}`;
-        document.getElementById('time').textContent = display;
-    }
+    const statKeys = ['hp', 'attack', 'defense', 'speed'];
+    const statApiNames = { hp: 'hp', attack: 'attack', defense: 'defense', speed: 'speed' };
 
-    renderLaps() {
-        const lapList = document.getElementById('lapList');
-        if (this.laps.length === 0) {
-            lapList.innerHTML = '';
-            return;
-        }
+    statKeys.forEach(key => {
+        const stat = data.stats.find(s => s.stat.name === statApiNames[key]);
+        const value = stat ? stat.base_stat : 0;
+        const pct = Math.min(100, Math.round((value / 255) * 100));
 
-        lapList.innerHTML = this.laps
-            .map((lap, index) => {
-                const totalMs = Math.floor(lap);
-                const ms = totalMs % 1000;
-                const seconds = Math.floor(totalMs / 1000) % 60;
-                const minutes = Math.floor(totalMs / 60000) % 60;
-                const hours = Math.floor(totalMs / 3600000);
+        document.getElementById(`stat-${key}`).innerHTML = `
+            <span class="stat-label">${STAT_LABELS[key]}</span>
+            <div class="stat-bar-bg">
+                <div class="stat-bar" style="width:${pct}%; background:${STAT_COLORS[key]}"></div>
+            </div>
+            <span class="stat-value">${value}</span>
+        `;
+    });
 
-                const lapTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(Math.floor(ms / 10)).padStart(2, '0')}`;
+    document.getElementById('pokemon-info').classList.remove('hidden');
+}
 
-                return `<li>ラップ ${index + 1}: ${lapTime}</li>`;
-            })
-            .join('');
-    }
-
-    saveState() {
-        localStorage.setItem('stopwatch', JSON.stringify({
-            time: this.time,
-            laps: this.laps,
-            running: this.running,
-            lastUpdateTime: this.lastUpdateTime
-        }));
-    }
-
-    loadState() {
-        const saved = localStorage.getItem('stopwatch');
-        if (saved) {
-            const state = JSON.parse(saved);
-            this.time = state.time || 0;
-            this.laps = state.laps || [];
-            this.running = state.running || false;
-            this.lastUpdateTime = state.lastUpdateTime || 0;
-
-            if (this.running) {
-                const elapsed = performance.now() - this.lastUpdateTime;
-                this.time += elapsed;
-                this.lastUpdateTime = performance.now();
-            }
-        }
+async function loadRandom() {
+    showLoading();
+    try {
+        const data = await fetchRandomPokemon();
+        showPokemon(data);
+    } catch (e) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('initial-message').classList.remove('hidden');
+        console.error('ポケモン取得失敗:', e);
     }
 }
 
-const stopwatch = new Stopwatch();
+document.getElementById('card').addEventListener('click', loadRandom);
+document.getElementById('catch-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    loadRandom();
+});
+
+document.getElementById('card').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') loadRandom();
+});

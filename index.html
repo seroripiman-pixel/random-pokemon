@@ -3,28 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ストップウォッチ</title>
+    <title>ランダムポケモン図鑑</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>ストップウォッチ</h1>
+        <h1>ポケモン図鑑</h1>
+        <p class="subtitle">クリックでランダムなポケモンを見るわ</p>
 
-        <div class="display">
-            <span id="time">00:00:00.00</span>
+        <div id="card" class="pokemon-card" role="button" tabindex="0" aria-label="クリックしてランダムなポケモンを表示">
+            <div id="loading" class="loading hidden">
+                <div class="pokeball">
+                    <div class="pokeball-top"></div>
+                    <div class="pokeball-middle"></div>
+                    <div class="pokeball-bottom"></div>
+                </div>
+            </div>
+
+            <div id="pokemon-info" class="pokemon-info hidden">
+                <div class="pokemon-number" id="pokemon-number">#001</div>
+                <img id="pokemon-image" class="pokemon-image" src="" alt="">
+                <h2 id="pokemon-name" class="pokemon-name"></h2>
+                <div id="pokemon-types" class="pokemon-types"></div>
+                <div class="stats">
+                    <div class="stat-row" id="stat-hp"></div>
+                    <div class="stat-row" id="stat-attack"></div>
+                    <div class="stat-row" id="stat-defense"></div>
+                    <div class="stat-row" id="stat-speed"></div>
+                </div>
+            </div>
+
+            <div id="initial-message" class="initial-message">
+                <div class="pokeball-large">
+                    <div class="pokeball-top"></div>
+                    <div class="pokeball-middle"></div>
+                    <div class="pokeball-bottom"></div>
+                </div>
+                <p>タップして始めるわ！</p>
+            </div>
         </div>
 
-        <div class="controls">
-            <button id="startBtn" class="btn btn-primary">開始</button>
-            <button id="stopBtn" class="btn btn-secondary" disabled>停止</button>
-            <button id="resetBtn" class="btn btn-danger">リセット</button>
-            <button id="lapBtn" class="btn btn-info" disabled>ラップ</button>
-        </div>
-
-        <div class="laps">
-            <h2>ラップタイム</h2>
-            <ul id="lapList"></ul>
-        </div>
+        <button id="catch-btn" class="catch-btn">ランダムに捕まえる！</button>
+    </div>
 
     <script src="script.js"></script>
 </body>
