@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Alarm</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Alarm</h1>
+
+        <div class="clock">
+            <span id="currentTime">00:00:00</span>
+        </div>
+
+        <div class="alarm-setup">
+            <div class="input-group">
+                <label for="alarmTime">アラーム時刻</label>
+                <input type="time" id="alarmTime" value="07:00">
+            </div>
+
+            <div class="input-group">
+                <label for="alarmLabel">ラベル</label>
+                <input type="text" id="alarmLabel" placeholder="朝起きる" maxlength="20">
+            </div>
+
+            <button id="setBtn" class="btn btn-set">セット</button>
+        </div>
+
+        <div class="alarms-list">
+            <h2>アラーム一覧</h2>
+            <div id="alarmsList"></div>
+        </div>
+
+        <div id="alarmModal" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="modalTitle">アラーム発火！</h2>
+                <p id="modalLabel"></p>
+                <div class="modal-time" id="modalTime"></div>
+                <button id="stopBtn" class="btn btn-stop">停止</button>
+                <button id="snoozeBtn" class="btn btn-snooze">5分</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="alarmSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==" type="audio/wav">
+    </audio>
+
+    <script src="script.js"></script>
+</body>
+</html>
