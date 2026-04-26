@@ -16,9 +16,15 @@ const STAT_LABELS = {
 
 async function fetchRandomPokemon() {
     const id = Math.floor(Math.random() * TOTAL_POKEMON) + 1;
-    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-    if (!res.ok) throw new Error('fetch failed');
-    return res.json();
+    const [pokemon, species] = await Promise.all([
+        fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then(r => { if (!r.ok) throw new Error('fetch failed'); return r.json(); }),
+        fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`).then(r => r.ok ? r.json() : null),
+    ]);
+    const jaName = species?.names?.find(n => n.language.name === 'ja')?.name
+        || species?.names?.find(n => n.language.name === 'ja-Hrkt')?.name
+        || pokemon.name;
+    pokemon.jaName = jaName;
+    return pokemon;
 }
 
 function showLoading() {
@@ -38,7 +44,7 @@ function showPokemon(data) {
         || data.sprites.front_default;
     img.alt = data.name;
 
-    document.getElementById('pokemon-name').textContent = data.name;
+    document.getElementById('pokemon-name').textContent = data.jaName || data.name;
 
     const typesEl = document.getElementById('pokemon-types');
     typesEl.innerHTML = data.types
