@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ホーム</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="timeline-page">
+    <header class="header">
+      <div class="header-title">𝕏</div>
+      <span class="header-user" id="header-username"></span>
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </header>
+
+    <div class="compose">
+      <textarea class="compose-textarea" id="compose-text"
+        placeholder="いまどうしてる？" maxlength="280"
+        oninput="updateCharCount()"></textarea>
+      <div class="compose-footer">
+        <span class="char-count" id="char-count">0 / 280</span>
+        <button class="btn-post" id="post-btn" onclick="postTweet()" disabled>ポスト</button>
+      </div>
+    </div>
+
+    <div id="feed"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+  <script>
+    let currentUser = null;
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return (location.href = 'index.html');
+      currentUser = session.user;
+
+      const { data: profile } = await supabase
+        .from('profiles').select('username').eq('id', currentUser.id).single();
+
+      document.getElementById('header-username').textContent =
+        '@' + (profile?.username || '');
+
+      await loadFeed();
+
+      supabase.channel('posts')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' },
+          () => loadFeed())
+        .subscribe();
+    }
+
+    function updateCharCount() {
+      const len = document.getElementById('compose-text').value.length;
+      const el = document.getElementById('char-count');
+      el.textContent = `${len} / 280`;
+      el.className = 'char-count' + (len >= 280 ? ' over' : len > 260 ? ' warn' : '');
+      document.getElementById('post-btn').disabled = len === 0 || len > 280;
+    }
+
+    async function postTweet() {
+      const content = document.getElementById('compose-text').value.trim();
+      if (!content || !currentUser) return;
+      const btn = document.getElementById('post-btn');
+      btn.disabled = true;
+
+      const { error } = await supabase.from('posts').insert({
+        user_id: currentUser.id, content
+      });
+
+      if (!error) {
+        document.getElementById('compose-text').value = '';
+        updateCharCount();
+        await loadFeed();
+      }
+      btn.disabled = false;
+    }
+
+    async function loadFeed() {
+      const { data: posts } = await supabase
+        .from('posts')
+        .select('id, content, created_at, user_id, profiles(username)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      const feed = document.getElementById('feed');
+      if (!posts || posts.length === 0) {
+        feed.innerHTML = '<div class="feed-empty">まだ投稿がないで。最初の一言をどうぞ！</div>';
+        return;
+      }
+
+      feed.innerHTML = posts.map(p => {
+        const username = p.profiles?.username || '不明';
+        const time = new Date(p.created_at).toLocaleString('ja-JP', {
+          month: 'numeric', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        const isOwn = p.user_id === currentUser?.id;
+        return `<div class="post">
+          <div class="post-header">
+            <span class="post-username">${esc(username)}</span>
+            <span class="post-time">${time}</span>
+            ${isOwn ? `<button class="btn-delete" onclick="deletePost('${p.id}')">削除</button>` : ''}
+          </div>
+          <div class="post-content">${esc(p.content)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    async function deletePost(id) {
+      await supabase.from('posts').delete().eq('id', id);
+      await loadFeed();
+    }
+
+    async function logout() {
+      await supabase.auth.signOut();
+      location.href = 'index.html';
+    }
+
+    function esc(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+               .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    init();
+  </script>
+</body>
+</html>

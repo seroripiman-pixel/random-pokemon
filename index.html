@@ -1,51 +1,89 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ランダムポケモン図鑑</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ログイン</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>ポケモン図鑑</h1>
-        <p class="subtitle">クリックでランダムなポケモンを見るわ</p>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="logo">𝕏</div>
 
-        <div id="card" class="pokemon-card" role="button" tabindex="0" aria-label="クリックしてランダムなポケモンを表示">
-            <div id="loading" class="loading hidden">
-                <div class="pokeball">
-                    <div class="pokeball-top"></div>
-                    <div class="pokeball-middle"></div>
-                    <div class="pokeball-bottom"></div>
-                </div>
-            </div>
+      <div class="tab-row">
+        <button class="tab active" id="tab-login" onclick="switchTab('login')">ログイン</button>
+        <button class="tab" id="tab-signup" onclick="switchTab('signup')">新規登録</button>
+      </div>
 
-            <div id="pokemon-info" class="pokemon-info hidden">
-                <div class="pokemon-number" id="pokemon-number">#001</div>
-                <img id="pokemon-image" class="pokemon-image" src="" alt="">
-                <h2 id="pokemon-name" class="pokemon-name"></h2>
-                <div id="pokemon-types" class="pokemon-types"></div>
-                <div class="stats">
-                    <div class="stat-row" id="stat-hp"></div>
-                    <div class="stat-row" id="stat-attack"></div>
-                    <div class="stat-row" id="stat-defense"></div>
-                    <div class="stat-row" id="stat-speed"></div>
-                </div>
-            </div>
+      <div id="login-form">
+        <input type="email" id="login-email" class="input" placeholder="メールアドレス" />
+        <input type="password" id="login-password" class="input" placeholder="パスワード" />
+        <button class="btn-primary" onclick="login()">ログイン</button>
+      </div>
 
-            <div id="initial-message" class="initial-message">
-                <div class="pokeball-large">
-                    <div class="pokeball-top"></div>
-                    <div class="pokeball-middle"></div>
-                    <div class="pokeball-bottom"></div>
-                </div>
-                <p>タップして始めるわ！</p>
-            </div>
-        </div>
+      <div id="signup-form" style="display:none">
+        <input type="text" id="signup-username" class="input" placeholder="ユーザー名 (@なし)" maxlength="30" />
+        <input type="email" id="signup-email" class="input" placeholder="メールアドレス" />
+        <input type="password" id="signup-password" class="input" placeholder="パスワード（8文字以上）" />
+        <button class="btn-primary" onclick="signup()">登録</button>
+      </div>
 
-        <button id="catch-btn" class="catch-btn">ランダムに捕まえる！</button>
+      <p id="auth-msg" class="auth-msg"></p>
     </div>
+  </div>
 
-    <script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+  <script>
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) location.href = 'timeline.html';
+    });
+
+    function switchTab(tab) {
+      document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+      document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+      setMsg('', false);
+    }
+
+    function setMsg(text, isError = true) {
+      const el = document.getElementById('auth-msg');
+      el.textContent = text;
+      el.className = 'auth-msg ' + (isError ? 'error' : 'success');
+    }
+
+    async function login() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      if (!email || !password) return setMsg('メールとパスワードを入力してください');
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return setMsg(error.message);
+      location.href = 'timeline.html';
+    }
+
+    async function signup() {
+      const username = document.getElementById('signup-username').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+      if (!username || !email || !password) return setMsg('全ての項目を入力してください');
+      if (username.length < 2) return setMsg('ユーザー名は2文字以上必要です');
+      if (password.length < 8) return setMsg('パスワードは8文字以上必要です');
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { username } }
+      });
+      if (error) return setMsg(error.message);
+
+      if (data.session) {
+        location.href = 'timeline.html';
+      } else {
+        setMsg('確認メールを送りました。メールを確認してください。', false);
+      }
+    }
+  </script>
 </body>
 </html>
